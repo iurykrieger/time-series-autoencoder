@@ -18,16 +18,25 @@ APIKEYS = {
         'centauro-v5-transaction-30d.json',
     ]
 }
-data = {}
-metrics = []
     
 for apikey in APIKEYS:
+    data = {}
+    metrics = []
     out = open('%s.csv' % apikey, 'w')
     for json_data in APIKEYS[apikey]:
         viewdata = json.load(open('metrics/' + json_data, 'r'))
-
+,x
         for result in viewdata['data']['result']:
-            metric = apikey + '_' + result['metric']['method'] + '_' + result['metric']['path'] #+ '_' + result['metric']['statusCode']
+            if (result['metric']['statusCode'] != 'undefined'):
+                status = int(result['metric']['statusCode'])
+                if status >= 200 and status < 300:
+                    status = 'success'
+                elif status >= 400:
+                    status = 'fail'
+            else:
+                status = result['metric']['statusCode']
+
+            metric = result['metric']['method'] + '_' + result['metric']['path'] + '_' + status
             if metric not in metrics:
                 metrics.append(metric)
             for value in result['values']:
@@ -36,25 +45,15 @@ for apikey in APIKEYS:
                 data[value[0]][metric] = data[value[0]][metric] + float(value[1]) if metric in data[value[0]] else float(value[1])
 
 
-out.write('timestamp;')
-for metric in metrics:
-    print(metric)
-    out.write(metric + ';')
-out.write('\n')
-
-X = []
-Y = []
-
-for row in data:
-    out.write(datetime.utcfromtimestamp(row).strftime('%Y-%m-%d %H:%M:%S'))
-    X.append(int(row))
-    l = []
+    out.write('timestamp;')
+    print(len(metrics))
     for metric in metrics:
-        l.append((data[row][metric] if metric in data[row] else 0))
-        out.write('%.2f;' % (data[row][metric] if metric in data[row] else 0))
-    Y.append(l)
+        print(metric)
+        out.write(metric + ',')
     out.write('\n')
 
-plt.plot(X, Y)
-plt.gcf().autofmt_xdate()
-plt.show()
+    for row in data:
+        out.write('%s,' % datetime.utcfromtimestamp(row).strftime('%Y-%m-%d %H:%M:%S'))
+        for metric in metrics:
+            out.write('%.2f,' % (data[row][metric] if metric in data[row] else 0))
+        out.write('\n')
