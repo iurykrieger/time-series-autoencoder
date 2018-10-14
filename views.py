@@ -25,7 +25,7 @@ for apikey in APIKEYS:
     out = open('%s.csv' % apikey, 'w')
     for json_data in APIKEYS[apikey]:
         viewdata = json.load(open('metrics/' + json_data, 'r'))
-,x
+
         for result in viewdata['data']['result']:
             if (result['metric']['statusCode'] != 'undefined'):
                 status = int(result['metric']['statusCode'])
