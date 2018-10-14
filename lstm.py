@@ -64,7 +64,7 @@ reframed.drop(reframed.columns[[]], axis=1, inplace=True)
 
 # split into train and test sets
 values = reframed.values
-n_train_hours = 170
+n_train_hours = 180
 train = values[:n_train_hours, :]
 test = values[n_train_hours:, :]
 
@@ -89,7 +89,7 @@ model.add(Dense(1))
 model.compile(loss='mae', optimizer='adam')
 
 # fit network
-history = model.fit(train_X, train_y, epochs=50, batch_size=72, validation_data=(test_X, test_y), verbose=2, shuffle=False)
+history = model.fit(train_X, train_y, epochs=25, batch_size=72, validation_data=(test_X, test_y), verbose=2, shuffle=False)
 
 # plot history
 pyplot.plot(history.history['loss'], label='train')
@@ -103,10 +103,16 @@ pyplot.show()
 
 # make a prediction
 yhat = model.predict(test_X)
+
+pyplot.plot(test_y)
+pyplot.plot(yhat)
+pyplot.show()
+
 test_X = test_X.reshape((test_X.shape[0], test_X.shape[2]))
 
 # invert scaling for forecast
 inv_yhat = concatenate((yhat, test_X[:, 1:]), axis=1)
+print(inv_yhat)
 inv_yhat = scaler.inverse_transform(inv_yhat)
 inv_yhat = inv_yhat[:,0]
 
