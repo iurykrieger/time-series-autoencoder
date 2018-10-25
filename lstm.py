@@ -39,12 +39,12 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 
 
 # load dataset
-dataset = read_csv('centauro-v5.csv', header=0, index_col=0)
+dataset = read_csv('metrics/netshoes-br_90d.csv', header=0, index_col=0)
 values = dataset.values
 
 # integer encode direction
 encoder = LabelEncoder()
-values[:,9] = encoder.fit_transform(values[:,9])
+values[:,4] = encoder.fit_transform(values[:,4])
 
 # ensure all data is float
 values = values.astype('float32')
@@ -54,9 +54,7 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 scaled = scaler.fit_transform(values)
 
 # frame as supervised learning
-reframed = series_to_supervised(scaled, 1, 1)
-
-
+reframed = series_to_supervised(scaled, 1, 0)
 
 
 # split into train and test sets
@@ -72,7 +70,8 @@ test_X, test_y = test[:, :-1], test[:, -1]
 # reshape input to be 3D [samples, timesteps, features]
 train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
 test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
-print(train_X.shape, train_y.shape, test_X.shape, test_y.shape)
+
+
 
 
 
@@ -106,21 +105,21 @@ pyplot.legend()
 pyplot.show()
 
 
-# reshape to RMSE
-test_X = test_X.reshape((test_X.shape[0], test_X.shape[2]))
+# # reshape to RMSE
+# test_X = test_X.reshape((test_X.shape[0], test_X.shape[2]))
 
-# invert scaling for forecast
-inv_yhat = concatenate((yhat, test_X[:, 1:]), axis=1)
-print(inv_yhat)
-inv_yhat = scaler.inverse_transform(inv_yhat)
-inv_yhat = inv_yhat[:,0]
+# # invert scaling for forecast
+# inv_yhat = concatenate((yhat, test_X[:, 1:]), axis=1)
+# print(inv_yhat)
+# inv_yhat = scaler.inverse_transform(inv_yhat)
+# inv_yhat = inv_yhat[:,0]
 
-# invert scaling for actual
-test_y = test_y.reshape((len(test_y), 1))
-inv_y = concatenate((test_y, test_X[:, 1:]), axis=1)
-inv_y = scaler.inverse_transform(inv_y)
-inv_y = inv_y[:,0]
+# # invert scaling for actual
+# test_y = test_y.reshape((len(test_y), 1))
+# inv_y = concatenate((test_y, test_X[:, 1:]), axis=1)
+# inv_y = scaler.inverse_transform(inv_y)
+# inv_y = inv_y[:,0]
 
-# calculate RMSE
-rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
-print('Test RMSE: %.3f' % rmse)
+# # calculate RMSE
+# rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
+# print('Test RMSE: %.3f' % rmse)
