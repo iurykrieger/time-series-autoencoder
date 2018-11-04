@@ -1,7 +1,18 @@
 import requests
 from datetime import datetime
+from pandas import rolling_mean
 
-def get_metrics_by_endpoint(apikey, endpoint, start, end, step = 1000):
+def moving_average(values, N = 3):
+    cumsum, moving_aves = [0], []
+
+    for index, value in enumerate(values, 1):
+    cumsum.append(cumsum[index - 1] + value)
+    if index >= N:
+        moving_ave = (cumsum[index] - cumsum[index - N]) / N
+        moving_aves.append(moving_ave)
+    return moving_aves
+
+def get_metrics_by_endpoint(session, apikey, endpoint, start, end, step = 1000):
     base_url = "http://metrics.chaordicsystems.com/api/datasources/proxy/31/api/v1/query_range"
     params = {
         "query": "sum by (method, path, statusCode)(increase(collect_server_http_outbound{{apiKey=\"{apikey}\", path=\"{path}\"}}[5m]))".format(apikey=apikey, path=endpoint),
@@ -10,8 +21,7 @@ def get_metrics_by_endpoint(apikey, endpoint, start, end, step = 1000):
         "step": step
     }
     cookies = {
-        "grafana_sess": "fa2b89fe41eda196",
-        "chaordic_browserId": "08033bb0-d6e3-11e8-b4b5-2389a42d03b0"
+        "grafana_sess": session
     }
 
     return requests.get(base_url, params=params, cookies=cookies).json()
@@ -28,15 +38,16 @@ def parse_metrics(metrics, features, values):
                 values[value[0]][metric_name] = values[value[0]][metric_name] + float(value[1]) if metric_name in values[value[0]] else float(value[1])
 
 def write_metrics_file(apikey, start, end, features, values):
-    days = (datetime.fromtimestamp(end) - datetime.fromtimestamp(start)).days
-    out = open('metrics/{apikey}_{days}d.csv'.format(apikey=apikey, days=days), 'w')
-    out.write('timestamp')
-    for feature in features:
-        out.write(',' + feature)
-    out.write('\n')
-
-    for value in values:
-        out.write('%s' % datetime.utcfromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S'))
+    if (len(features) > 0):
+        days = (datetime.fromtimestamp(end) - datetime.fromtimestamp(start)).days
+        out = open('metrics/{apikey}_{days}d.csv'.format(apikey=apikey, days=days), 'w')
+        out.write('timestamp')
         for feature in features:
-            out.write(',%.2f' % (values[value][feature] if feature in values[value] else 0))
+            out.write(',' + feature)
         out.write('\n')
+
+        for value in values:
+            out.write('%s' % datetime.utcfromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S'))
+            for feature in features:
+                out.write(',%.2f' % (values[value][feature] if feature in values[value] else 0))
+            out.write('\n')
