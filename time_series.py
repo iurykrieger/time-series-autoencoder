@@ -1,7 +1,8 @@
-from metrics import get_metrics_by_endpoint, parse_metrics, write_metrics_file
+from metrics import get_metrics_by_endpoint, parse_metrics, write_metrics_file, write_normalized_metrics_file
 from plot import plot
 from os import path
 import traceback
+from datetime import datetime
 
 APIKEYS = [
     "agrotama",
@@ -226,17 +227,21 @@ for apikey in APIKEYS:
     try:
         features = []
         values = {}
-        apikey_data_file = "metrics/{apikey}_90d.csv".format(apikey=apikey)
-        apikey_figure_file = "figures/{apikey}_90d.png".format(apikey=apikey)
-
+        days = (datetime.fromtimestamp(END) - datetime.fromtimestamp(START)).days
+        apikey_data_file = "metrics/raw/{apikey}_{days}d.csv".format(apikey=apikey, days=days)
+        apikey_normalized_data_file = "metrics/normalized/{apikey}_{days}d.csv".format(apikey=apikey, days=days)
+        apikey_figure_file = "figures/raw/{apikey}_{days}d.png".format(apikey=apikey, days=days)
+        apikey_normalized_figure_file = "figures/normalized/{apikey}_{days}d.png".format(apikey=apikey, days=days)
         print("Processing \"{apikey}\"...".format(apikey=apikey))
 
         if not path.isfile(apikey_data_file):
             for endpoint in ENDPOINTS:
                 parse_metrics(get_metrics_by_endpoint(GRAFANA_SESSION, apikey, endpoint, START, END), features, values)
+            write_metrics_file(apikey_data_file, features, values)
 
-            write_metrics_file(apikey, START, END, features, values)
-
+        write_normalized_metrics_file(apikey_data_file, apikey_normalized_data_file, 50)
         plot(apikey, apikey_data_file, apikey_figure_file)
+        plot(apikey, apikey_normalized_data_file, apikey_normalized_figure_file)
+
     except Exception as e:
         traceback.print_exc()
