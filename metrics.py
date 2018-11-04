@@ -46,7 +46,7 @@ def write_normalized_metrics_file(dataset_file, normalized_dataset_file, N = 5):
     if (isfile(dataset_file)):
         dataset = read_csv(dataset_file, header=0, index_col=0)
         for column in dataset.columns:
-            dataset[column] = dataset[column].rolling(N).std()
-            dataset[column] = dataset[column].rolling(N).mean()
+            dataset[column] = dataset[column].rolling(N, min_periods=0).std()
+            dataset[column] = dataset[column].rolling(N, min_periods=0).mean()
 
         dataset.to_csv(normalized_dataset_file, sep=",")
