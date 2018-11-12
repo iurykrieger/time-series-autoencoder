@@ -249,9 +249,13 @@ for client in APIKEYS:
 
         write_normalized_metrics_file(apikey_data_file, apikey_normalized_data_file, 50)
         train, test = get_train_test_dataset(apikey_normalized_data_file, client)
-        autoencoder = get_autoencoder(train, 3000, 250)
+        train_X = train.values
+        # reshape input to be 3D [samples, timesteps, features]
+        train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
+        # test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
+        autoencoder = get_autoencoder(train_X, 1, 1)
 
-        autoencoder.fit(train.values, train.columns, epochs = 10, batch_size = 32, shuffle = False, validation_data=(test.values, test.columns))
+        autoencoder.fit(train.values, epochs = 10, batch_size = 32, shuffle = False)
 
         # plot(apikey, apikey_data_file, apikey_figure_file)
         # plot(apikey, apikey_normalized_data_file, apikey_normalized_figure_file)
