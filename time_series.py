@@ -3,6 +3,8 @@ from plot import plot
 from os import path
 from datetime import datetime
 from autoencoder import get_train_test_dataset, get_autoencoder
+from tensorflow.keras.models import load_model
+from pandas import DataFrame
 import traceback
 
 APIKEYS = [
@@ -13,10 +15,34 @@ APIKEYS = [
             "end": "2018-10-28"
         }
     },
-    # "animale-vtex",
-    # "api-sample",
-    # "apoioentrega",
-    # "arredo-ar",
+    {
+        "apikey": "animale-vtex",
+        "train": {
+            "start": "2018-09-16",
+            "end": "2018-10-28"
+        }
+    },
+    {
+        "apikey": "apoioentrega",
+        "train": {
+            "start": "2018-09-20",
+            "end": "2018-10-28"
+        }
+    },
+    {
+        "apikey": "arredo-ar",
+        "train": {
+            "start": "2018-08-20",
+            "end": "2018-09-20"
+        }
+    },
+    {
+        "apikey": "arredo-uy",
+        "train": {
+            "start": "2018-09-01",
+            "end": "2018-10-15"
+        }
+    }
     # "arredo-uy",
     # "artex",
     # "asus",
@@ -230,6 +256,9 @@ START = 1532646933
 END = 1540422933
 GRAFANA_SESSION = "fa2b89fe41eda196"
 
+X_train = DataFrame()
+X_test = DataFrame()
+
 for client in APIKEYS:
     try:
         features = []
@@ -249,16 +278,22 @@ for client in APIKEYS:
 
         write_normalized_metrics_file(apikey_data_file, apikey_normalized_data_file, 50)
         train, test = get_train_test_dataset(apikey_normalized_data_file, client)
-        train_X = train.values
-        # reshape input to be 3D [samples, timesteps, features]
-        train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
-        # test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
-        autoencoder = get_autoencoder(train_X, 1, 1)
-
-        autoencoder.fit(train.values, epochs = 10, batch_size = 32, shuffle = False)
+        
+        X_train = X_train.append(train)
+        X_test = X_test.append(test)
 
         # plot(apikey, apikey_data_file, apikey_figure_file)
         # plot(apikey, apikey_normalized_data_file, apikey_normalized_figure_file)
 
     except Exception as e:
         traceback.print_exc()
+
+try:
+    autoencoder = load_model('autoencoder.h5')
+except Exception as ex:
+    autoencoder = get_autoencoder(X_train.shape[1])
+    print(X_train.shape)
+    autoencoder.fit(X_train.values, X_train.values, epochs = 500, batch_size = 32, shuffle = False, validation_data=(X_test.values, X_test.values)) 
+    reconstructed_values = autoencoder.predict(test.values)
+    print(reconstructed_values)
+    autoencoder.save('autoencoder.h5') 

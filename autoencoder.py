@@ -2,11 +2,12 @@ from pandas import read_csv, Series
 from datetime import datetime
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import SGD
 from pandas import concat
 
 def get_train_test_dataset(apikey_normalized_data_file, client):
     dataset = read_csv(apikey_normalized_data_file, header=0, index_col=0, parse_dates=True)
-    dataset = series_to_supervised(dataset)
+    dataset = series_to_supervised(dataset, 2, 2)
     train = dataset[client["train"]["start"]:client["train"]["end"]]
     test = dataset[:client["train"]["start"]]
     test.append(dataset[client["train"]["end"]:])
@@ -36,23 +37,28 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 		agg.dropna(inplace=True)
 	return agg
 
-def get_autoencoder(data, encoding_dimension, step = 250):
-	dim = data.shape[0]
-	data = Input(shape=(data.shape[1], data.shape[2]))
-	encoded = data
+def get_autoencoder(input_dimension):
+	input_layer = Input(shape=(input_dimension, ))
+	autoencoder = input_layer
 
-	# Encoded layers
-	for value in range((dim - step), encoding_dimension, -step):
-		encoded = Dense(value, activation="relu")(encoded)
+	step = input_dimension * 10
+	steps = [step]
+	while (step > input_dimension):
+		step = int(step / 3)
+		steps.append(step)
 
-	decoded = Dense(encoding_dimension, activation="relu")(encoded)
+	for value in steps:
+		autoencoder = Dense(value, activation="relu")(autoencoder)
 
-	# Decoded layers
-	for value in range(encoding_dimension, (dim + step), step):
-		decoded = Dense(value, activation="relu")(decoded)
+	steps.pop()	
+	steps = steps[::-1]
 
-	autoencoder = Model(inputs=data, outputs=decoded)
-	autoencoder.compile(optimizer="adadelta", loss="binary_crossentropy")
+	for value in steps:
+		autoencoder = Dense(value, activation="relu")(autoencoder)
+
+	autoencoder = Dense(input_dimension, activation="relu")(autoencoder)
+	autoencoder = Model(inputs=input_layer, outputs=autoencoder)
+	autoencoder.compile(optimizer="rmsprop", loss="mean_squared_error")
 	autoencoder.summary()
 
 	return autoencoder
